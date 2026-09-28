@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "196770647018",
+    "project_id": "thakur-s-app",
+    "storage_bucket": "thakur-s-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:196770647018:android:b789826c68dfc295c18093",
+        "android_client_info": {
+          "package_name": "com.thakurmsm.attendance"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA9b53_k4boxOlXHOQ8UObytldqkKlSazM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
