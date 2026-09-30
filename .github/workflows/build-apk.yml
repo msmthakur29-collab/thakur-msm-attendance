@@ -1,10 +1,10 @@
 name: Build THAKUR MSM APK
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -20,12 +20,48 @@ jobs:
           channel: stable
 
       - name: Generate Android project
-        run: flutter create --org com.thakurmsm --project-name attendance .
+        run: |
+          flutter create \
+            --org com.thakurmsm \
+            --project-name attendance \
+            .
 
-      - name: Copy Firebase config
+      - name: Copy Firebase configuration
         run: |
           mkdir -p android/app
           cp google-services.json android/app/google-services.json
+
+      - name: Configure Google Services plugin
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          settings = Path("android/settings.gradle.kts")
+          if settings.exists():
+              text = settings.read_text()
+
+              if 'com.google.gms.google-services' not in text:
+                  marker = 'plugins {'
+                  plugin = '''plugins {
+              id("com.google.gms.google-services") version "4.4.2" apply false
+          '''
+                  text = text.replace(marker, plugin, 1)
+                  settings.write_text(text)
+
+          app = Path("android/app/build.gradle.kts")
+          if app.exists():
+              text = app.read_text()
+
+              if 'com.google.gms.google-services' not in text:
+                  text = text.replace(
+                      'plugins {',
+                      '''plugins {
+              id("com.google.gms.google-services")
+          ''',
+                      1
+                  )
+                  app.write_text(text)
+          PY
 
       - name: Get dependencies
         run: flutter pub get
