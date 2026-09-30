@@ -19,8 +19,13 @@ jobs:
         with:
           channel: stable
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Generate Android project
+        run: flutter create --org com.thakurmsm --project-name attendance .
+
+      - name: Copy Firebase config
+        run: |
+          mkdir -p android/app
+          cp google-services.json android/app/google-services.json
 
       - name: Get dependencies
         run: flutter pub get
