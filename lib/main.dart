@@ -5,12 +5,29 @@ import 'package:flutter/material.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const ThakurMsmApp());
+
+  String? firebaseError;
+
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    firebaseError = e.toString();
+  }
+
+  runApp(
+    ThakurMsmApp(
+      firebaseError: firebaseError,
+    ),
+  );
 }
 
 class ThakurMsmApp extends StatelessWidget {
-  const ThakurMsmApp({super.key});
+  final String? firebaseError;
+
+  const ThakurMsmApp({
+    super.key,
+    this.firebaseError,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +38,62 @@ class ThakurMsmApp extends StatelessWidget {
         useMaterial3: true,
         colorSchemeSeed: Colors.blue,
       ),
-      home: const LoginPage(),
+      home: firebaseError == null
+          ? const LoginPage()
+          : FirebaseErrorPage(error: firebaseError!),
+    );
+  }
+}
+
+// ================= FIREBASE ERROR =================
+
+class FirebaseErrorPage extends StatelessWidget {
+  final String error;
+
+  const FirebaseErrorPage({
+    super.key,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('THAKUR MSM'),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 80,
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Firebase Initialization Error',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 15),
+              const Text(
+                'Firebase start nahi ho pa raha.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              SelectableText(
+                error,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -129,28 +201,23 @@ class _LoginPageState extends State<LoginPage> {
                   children: [
                     const Icon(
                       Icons.fingerprint,
-                      size: 70,
+                      size: 75,
                     ),
                     const SizedBox(height: 12),
-
                     const Text(
                       'THAKUR MSM',
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 30,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-
-                    const SizedBox(height: 4),
-
+                    const SizedBox(height: 5),
                     const Text(
                       'Attendance Management System',
                       textAlign: TextAlign.center,
                     ),
-
-                    const SizedBox(height: 28),
-
+                    const SizedBox(height: 30),
                     TextField(
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
@@ -160,9 +227,7 @@ class _LoginPageState extends State<LoginPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-
-                    const SizedBox(height: 14),
-
+                    const SizedBox(height: 15),
                     TextField(
                       controller: passwordController,
                       obscureText: true,
@@ -172,12 +237,10 @@ class _LoginPageState extends State<LoginPage> {
                         border: OutlineInputBorder(),
                       ),
                     ),
-
-                    const SizedBox(height: 16),
-
+                    const SizedBox(height: 18),
                     if (error != null)
                       Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.only(bottom: 15),
                         child: Text(
                           error!,
                           textAlign: TextAlign.center,
@@ -186,7 +249,6 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                       ),
-
                     SizedBox(
                       height: 50,
                       child: FilledButton(
@@ -218,24 +280,28 @@ class _LoginPageState extends State<LoginPage> {
 class EmployeePage extends StatelessWidget {
   const EmployeePage({super.key});
 
-  Future<void> punch(BuildContext context, String type) async {
+  Future<void> punch(
+    BuildContext context,
+    String type,
+  ) async {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) return;
 
-    final ref =
-        FirebaseFirestore.instance.collection('attendance').doc();
+    try {
+      await FirebaseFirestore.instance
+          .collection('attendance')
+          .add({
+        'userId': user.uid,
+        'type': type,
+        'timestamp': FieldValue.serverTimestamp(),
+        'date': DateTime.now()
+            .toIso8601String()
+            .substring(0, 10),
+      });
 
-    await ref.set({
-      'userId': user.uid,
-      'type': type,
-      'timestamp': FieldValue.serverTimestamp(),
-      'date': DateTime.now()
-          .toIso8601String()
-          .substring(0, 10),
-    });
+      if (!context.mounted) return;
 
-    if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -243,6 +309,14 @@ class EmployeePage extends StatelessWidget {
                 ? 'Check In saved successfully'
                 : 'Check Out saved successfully',
           ),
+        ),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
         ),
       );
     }
@@ -287,28 +361,17 @@ class EmployeePage extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 30),
-
             FilledButton.icon(
               onPressed: () => punch(context, 'check_in'),
               icon: const Icon(Icons.login),
               label: const Text('CHECK IN'),
             ),
-
-            const SizedBox(height: 14),
-
+            const SizedBox(height: 15),
             OutlinedButton.icon(
               onPressed: () => punch(context, 'check_out'),
               icon: const Icon(Icons.logout),
               label: const Text('CHECK OUT'),
-            ),
-
-            const SizedBox(height: 30),
-
-            const Text(
-              'Your attendance is stored securely in Firebase.',
-              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -348,14 +411,12 @@ class AdminPage extends StatelessWidget {
           ),
         ],
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('attendance')
             .orderBy('timestamp', descending: true)
             .limit(100)
             .snapshots(),
-
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -363,6 +424,7 @@ class AdminPage extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Text(
                   'Error: ${snapshot.error}',
+                  textAlign: TextAlign.center,
                 ),
               ),
             );
@@ -378,9 +440,7 @@ class AdminPage extends StatelessWidget {
 
           if (docs.isEmpty) {
             return const Center(
-              child: Text(
-                'No attendance records yet.',
-              ),
+              child: Text('No attendance records yet.'),
             );
           }
 
@@ -394,9 +454,7 @@ class AdminPage extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
-              const SizedBox(height: 12),
-
+              const SizedBox(height: 15),
               ...docs.map((doc) {
                 final data =
                     doc.data() as Map<String, dynamic>;
